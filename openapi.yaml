@@ -1,0 +1,105 @@
+openapi: 3.0.3
+info:
+  title: HeyKid! - API Modulo de Gestion y Aprobacion de Contactos
+  version: 1.0.0
+  description: >
+    API REST del modulo de contactos de HeyKid!. Permite crear solicitudes de
+    contacto para un menor, aprobarlas o rechazarlas (solo el adulto responsable)
+    y administrar los contactos autorizados.
+servers:
+  - url: http://localhost:3000
+paths:
+  /api/solicitudes-contacto:
+    post:
+      summary: Crear una solicitud de contacto
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CrearSolicitudRequest'
+      responses:
+        '201': { description: Solicitud creada en estado PENDIENTE }
+        '400': { description: Datos invalidos }
+        '404': { description: Perfil o usuario inexistente }
+        '409': { description: Solicitud duplicada o contacto ya autorizado }
+
+  /api/solicitudes-contacto/{solicitudId}/aprobar:
+    put:
+      summary: Aprobar una solicitud (crea el contacto autorizado)
+      parameters:
+        - { name: solicitudId, in: path, required: true, schema: { type: integer } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                adultoResponsableId: { type: integer, example: 1 }
+      responses:
+        '200': { description: Solicitud aprobada }
+        '403': { description: El usuario no es el adulto responsable }
+        '404': { description: Solicitud o perfil inexistente }
+        '409': { description: Solicitud ya resuelta o contacto duplicado }
+
+  /api/solicitudes-contacto/{solicitudId}/rechazar:
+    put:
+      summary: Rechazar una solicitud
+      parameters:
+        - { name: solicitudId, in: path, required: true, schema: { type: integer } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                adultoResponsableId: { type: integer, example: 1 }
+      responses:
+        '200': { description: Solicitud rechazada }
+        '403': { description: El usuario no es el adulto responsable }
+        '404': { description: Solicitud o perfil inexistente }
+        '409': { description: Solicitud ya resuelta }
+
+  /api/perfiles-menor/{perfilMenorId}/solicitudes:
+    get:
+      summary: Listar solicitudes de un perfil de menor
+      parameters:
+        - { name: perfilMenorId, in: path, required: true, schema: { type: integer } }
+        - name: estado
+          in: query
+          required: false
+          schema: { type: string, enum: [PENDIENTE, APROBADA, RECHAZADA] }
+      responses:
+        '200': { description: Listado de solicitudes }
+        '404': { description: Perfil inexistente }
+
+  /api/perfiles-menor/{perfilMenorId}/contactos-autorizados:
+    get:
+      summary: Listar contactos autorizados activos de un menor
+      parameters:
+        - { name: perfilMenorId, in: path, required: true, schema: { type: integer } }
+      responses:
+        '200': { description: Listado de contactos activos }
+        '404': { description: Perfil inexistente }
+
+  /api/contactos-autorizados/{contactoId}/desactivar:
+    put:
+      summary: Revocar (desactivar) un contacto autorizado
+      parameters:
+        - { name: contactoId, in: path, required: true, schema: { type: integer } }
+      responses:
+        '200': { description: Contacto desactivado }
+        '404': { description: Contacto inexistente }
+
+components:
+  schemas:
+    CrearSolicitudRequest:
+      type: object
+      required: [perfilMenorId, solicitanteId, contactoSolicitadoId]
+      properties:
+        perfilMenorId: { type: integer, example: 1 }
+        solicitanteId: { type: integer, example: 4 }
+        contactoSolicitadoId: { type: integer, example: 4 }
+        motivo: { type: string, example: 'Tía del menor, autorizada.' }
